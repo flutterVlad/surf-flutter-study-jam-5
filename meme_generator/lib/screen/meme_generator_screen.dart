@@ -1,6 +1,14 @@
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:screenshot/screenshot.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'enums.dart';
+import 'dialog_builder.dart';
 
 class MemeGeneratorScreen extends StatefulWidget {
   const MemeGeneratorScreen({Key? key}) : super(key: key);
@@ -10,16 +18,23 @@ class MemeGeneratorScreen extends StatefulWidget {
 }
 
 class _MemeGeneratorScreenState extends State<MemeGeneratorScreen> {
+  late final ImagePicker imagePicker;
+  late final ScreenshotController screenshotController;
+
   late TextEditingController _controller;
 
   late String memeText;
   late String memeImageUrl;
   late final List<String> savedUrls;
   late final List<String> savedText;
+  Uint8List? xImage;
+  XFile? imageFromGallery;
 
   @override
   void initState() {
     _controller = TextEditingController();
+    imagePicker = ImagePicker();
+    screenshotController = ScreenshotController();
     memeText = 'Здесь мог бы быть ваш мем';
     savedText = [memeText];
     memeImageUrl =
@@ -49,85 +64,141 @@ class _MemeGeneratorScreenState extends State<MemeGeneratorScreen> {
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          ColoredBox(
-            color: Colors.black,
-            child: DecoratedBox(
-              decoration: decoration,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 50,
-                  vertical: 20,
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[
-                    SizedBox(
-                      width: double.infinity,
-                      height: 200,
-                      child: DecoratedBox(
-                        decoration: decoration,
-                        child: Padding(
-                          padding: const EdgeInsets.all(4.0),
-                          child: Image.network(
-                            memeImageUrl,
-                            fit: BoxFit.cover,
+          Screenshot(
+            controller: screenshotController,
+            child: ColoredBox(
+              color: Colors.black,
+              child: DecoratedBox(
+                decoration: decoration,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 50,
+                    vertical: 20,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      SizedBox(
+                        width: double.infinity,
+                        height: 200,
+                        child: DecoratedBox(
+                          decoration: decoration,
+                          child: Padding(
+                            padding: const EdgeInsets.all(4.0),
+                            child: imageFromGallery != null
+                                ? Image.file(File(imageFromGallery!.path))
+                                : Image.network(
+                                    memeImageUrl,
+                                    fit: BoxFit.cover,
+                                  ),
                           ),
                         ),
                       ),
-                    ),
-                    Text(
-                      memeText,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontFamily: 'Impact',
-                        fontSize: 40,
-                        color: Colors.white,
+                      Text(
+                        memeText,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontFamily: 'Impact',
+                          fontSize: 40,
+                          color: Colors.white,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
           Container(
             margin: const EdgeInsets.symmetric(vertical: 10),
-            child: Center(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  TextButton(
-                    onPressed: () => dialogBulder(
-                      context,
-                      'Введите URL картинки',
-                      ContentType.image,
-                      savedUrls,
-                    ),
-                    child: const Text(
-                      'Изменить картинку',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white,
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    TextButton(
+                      onPressed: () => dialogBulder(
+                        context: context,
+                        title: 'Введите URL картинки',
+                        type: ContentType.image,
+                        controller: _controller,
+                        savedItems: savedUrls,
+                        onAccept: () {
+                          setState(() {
+                            memeImageUrl = _controller.text.isNotEmpty
+                                ? _controller.text
+                                : memeImageUrl;
+                            addInSaved(savedUrls, memeImageUrl);
+                            imageFromGallery = null;
+                          });
+                        },
+                        onTakeSaved: (String item) {
+                          setState(() {
+                            memeImageUrl = item;
+                            imageFromGallery = null;
+                          });
+                        },
+                        onTakeFromGallery: () async {
+                          final XFile? image = await imagePicker.pickImage(
+                            source: ImageSource.gallery,
+                          );
+                          setState(() {
+                            imageFromGallery = image;
+                          });
+                        },
+                      ),
+                      child: const Text(
+                        'Изменить картинку',
+                        style: TextStyle(
+                          color: Colors.white,
+                        ),
                       ),
                     ),
-                  ),
-                  TextButton(
-                    onPressed: () => dialogBulder(
-                      context,
-                      'Введите текст',
-                      ContentType.text,
-                      savedText,
-                    ),
-                    child: const Text(
-                      'Изменить текст',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white,
+                    TextButton(
+                      onPressed: () => dialogBulder(
+                        context: context,
+                        title: 'Введите текст',
+                        type: ContentType.text,
+                        controller: _controller,
+                        savedItems: savedText,
+                        onAccept: () {
+                          setState(() {
+                            memeText = _controller.text.isNotEmpty
+                                ? _controller.text
+                                : memeText;
+                            addInSaved(savedText, memeText);
+                          });
+                        },
+                        onTakeSaved: (String item) {
+                          setState(() {
+                            memeText = item;
+                          });
+                        },
+                      ),
+                      child: const Text(
+                        'Изменить текст',
+                        style: TextStyle(
+                          color: Colors.white,
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    TextButton(
+                      onPressed: takePictureAndShare,
+                      child: const Text(
+                        'Поделиться мемом',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ],
+                ),
+                if (xImage != null) Image.file(File.fromRawPath(xImage!)),
+              ],
             ),
           ),
         ],
@@ -135,91 +206,15 @@ class _MemeGeneratorScreenState extends State<MemeGeneratorScreen> {
     );
   }
 
-  Future<void> dialogBulder(
-    BuildContext context,
-    String title,
-    ContentType type,
-    List<String> savedItemsString,
-  ) async {
-    final List<TextButton> savedItems = savedItemsString
-        .map(
-          (e) => TextButton(
-            onPressed: () {
-              setState(() {
-                if (type == ContentType.image) {
-                  memeImageUrl = e;
-                } else {
-                  memeText = e;
-                }
-              });
-              Navigator.of(context).pop();
-            },
-            child: Text(
-              e,
-              maxLines: 1,
-              style: const TextStyle(color: Colors.blue),
-            ),
-          ),
-        )
-        .toList();
+  Future<void> takePictureAndShare() async {
+    await screenshotController.capture().then((Uint8List? image) async {
+      if (image != null) {
+        final Directory directory = await getApplicationDocumentsDirectory();
+        final File file = await File('${directory.path}/image.png').create();
+        await file.writeAsBytes(image);
 
-    return showDialog(
-      context: context,
-      builder: (BuildContext context) => AlertDialog(
-        title: Text(title),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            ...savedItems,
-            TextField(controller: _controller),
-          ],
-        ),
-        actions: <TextButton>[
-          TextButton(
-            onPressed: () {
-              _controller.clear();
-              Navigator.of(context).pop();
-            },
-            child: const Text(
-              'Назад',
-              style: TextStyle(color: Colors.red),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              setState(() {
-                if (type == ContentType.image) {
-                  memeImageUrl = _controller.text.isNotEmpty
-                      ? _controller.text
-                      : memeImageUrl;
-                  addInSaved(savedUrls, memeImageUrl);
-                } else {
-                  memeText =
-                      _controller.text.isNotEmpty ? _controller.text : memeText;
-                  addInSaved(savedText, memeText);
-                }
-              });
-              _controller.clear();
-              Navigator.of(context).pop();
-            },
-            child: const Text(
-              'Подвердить',
-              style: TextStyle(color: Colors.blue),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void addInSaved(List<String> savedList, String item) {
-    if (item.isNotEmpty) {
-      savedList.insert(0, item);
-      if (savedList.length > 5) {
-        savedList.removeLast();
+        await Share.shareXFiles([XFile(file.path)]);
       }
-      savedList.toSet().toList();
-    }
+    });
   }
 }
