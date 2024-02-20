@@ -18,16 +18,28 @@ class MemeGeneratorScreen extends StatefulWidget {
 }
 
 class _MemeGeneratorScreenState extends State<MemeGeneratorScreen> {
+  /// Instance of [ImagePicker] for picking picture from gallery.
   late final ImagePicker imagePicker;
+
+  /// Instance of [ScreenshotController] for taking screenshot.
   late final ScreenshotController screenshotController;
 
+  /// Instance of [TextEditingController] for [TextField]s.
   late TextEditingController _controller;
 
+  /// Text in meme.
   late String memeText;
+
+  /// Image URL in meme.
   late String memeImageUrl;
+
+  /// Little storage of image URL's from 5 elements.
   late final List<String> savedUrls;
+
+  /// Little storage of meme's text from 5 elements.
   late final List<String> savedText;
-  Uint8List? xImage;
+
+  /// Image from gallery.
   XFile? imageFromGallery;
 
   @override
@@ -197,7 +209,6 @@ class _MemeGeneratorScreenState extends State<MemeGeneratorScreen> {
                     ),
                   ],
                 ),
-                if (xImage != null) Image.file(File.fromRawPath(xImage!)),
               ],
             ),
           ),
@@ -206,6 +217,7 @@ class _MemeGeneratorScreenState extends State<MemeGeneratorScreen> {
     );
   }
 
+  /// Takes a picture and share in other program.
   Future<void> takePictureAndShare() async {
     await screenshotController.capture().then((Uint8List? image) async {
       if (image != null) {

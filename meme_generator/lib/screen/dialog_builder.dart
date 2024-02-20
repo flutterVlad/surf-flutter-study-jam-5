@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'enums.dart';
 
+/// Returns [AlertDialog] for edit meme.
 Future<void> dialogBulder({
   required BuildContext context,
   required String title,
@@ -78,6 +79,9 @@ Future<void> dialogBulder({
   );
 }
 
+/// Updates a [savedList] with [item].
+///
+/// [savedList] can not have more then 5 elements.
 void addInSaved(List<String> savedList, String item) {
   if (item.isNotEmpty) {
     savedList.insert(0, item);
